@@ -1,83 +1,62 @@
-'use client'
-import React, { useEffect, useState } from 'react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import * as z from 'zod'
-import Link from 'next/link'
-import { useDebounceValue } from "usehooks-ts"
-import { useToast } from "@/components/ui/use-toast"
-import { useRouter } from 'next/navigation'
-import { signInSchema } from '@/schemas/signInSchema'
-import { signUpSchema } from '@/schemas/signUpSchemas'
-import axios, { AxiosError } from "axios"
-import { ApiResponse } from '@/types/ApiResponse'
+'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { signIn } from 'next-auth/react';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/use-toast';
+import { signInSchema } from '@/schemas/signInSchema';
 
-function page() {
-  const [username, setUsername] = useState("");
-  const [usernameMessage, setUsernameMessage] = useState("");
-  const [ischeckingUsername, setIsCheckingUsername] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const debouncedUsername = useDebounceValue(username, 300);
-
-  const { toast } = useToast();
+export default function SignInForm() {
   const router = useRouter();
 
-  //zod implementation
-
-  const form = useForm<z.infer<typeof signUpSchema>>({
-    resolver: zodResolver(signUpSchema),
+  const form = useForm<z.infer<typeof signInSchema>>({
+    resolver: zodResolver(signInSchema),
     defaultValues: {
-      username: '',
-      email: '',
+      identifier: '',
       password: '',
-    }
+    },
   });
 
-  useEffect(()=> {
-    const checkUsernameUnique = async () => {
-      if(debouncedUsername) {
-        setIsCheckingUsername(true);
-        setUsernameMessage('');
-        try {
-          const response = await axios.get(`/api/check-username-unique?username=${debouncedUsername}`);
-          setUsernameMessage(response.data.message);
-        } catch (error) {
-          const axiosError = error as AxiosError<ApiResponse>;
-          setUsernameMessage(axiosError.response?.data.message ?? "Error checking username");
-        }
-        finally {
-          setIsCheckingUsername(false);
-        }
+  const { toast } = useToast();
+  const onSubmit = async (data: z.infer<typeof signInSchema>) => {
+    const result = await signIn('credentials', {
+      redirect: false,
+      identifier: data.identifier,
+      password: data.password,
+    });
+
+    if (result?.error) {
+      if (result.error === 'CredentialsSignin') {
+        toast({
+          title: 'Login Failed',
+          description: 'Incorrect username or password',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
       }
     }
-    checkUsernameUnique();
-  }, [debouncedUsername]);
 
-  const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
-    setIsSubmitting(true);
-    try {
-      const response = await axios.post<ApiResponse>('/api/sign-up', data);
-      toast({
-        title: "Success",
-        description: response.data.message
-      })
-      router.replace(`/verify/${username}`);
-      setIsSubmitting(false);
-    } catch (error) {
-      console.error("error in signup of user", error);
-      const axiosError = error as AxiosError<ApiResponse>;
-      let errorMessage = axiosError.response?.data.message 
-      toast({
-        title: "Signup failed",
-        description: errorMessage,
-        variant: "destructive",
-      })
-      setIsSubmitting(false);
+    if (result?.url) {
+      router.replace('/dashboard');
     }
-  
-  }
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-800">
@@ -126,7 +105,4 @@ function page() {
       </div>
     </div>
   );
-
 }
-
-export default page
