@@ -74,7 +74,7 @@ export async function POST(request: Request) {
         success: true,
         message: "User registered successfully. Please verify your email",
       },
-      { status: 500 }
+      { status: 200 }
     );
   } catch (error: any) {
     console.error("Error in singup route", error);
