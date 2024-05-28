@@ -31,11 +31,13 @@ export default function SignInForm() {
 
   const { toast } = useToast();
   const onSubmit = async (data: z.infer<typeof signInSchema>) => {
+    console.log("submitted form for sign in");
     const result = await signIn('credentials', {
       redirect: false,
       identifier: data.identifier,
       password: data.password,
     });
+    console.log("result coming from backend", result);
 
     if (result?.error) {
       if (result.error === 'CredentialsSignin') {
@@ -52,8 +54,8 @@ export default function SignInForm() {
         });
       }
     }
-
     if (result?.url) {
+      console.log("hei ");
       router.replace('/dashboard');
     }
   };
